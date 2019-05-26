@@ -1,14 +1,15 @@
 package assignment.entities;
 
-import assignment.exceptions.InvalidEmailFormatException;
-import assignment.exceptions.InvalidIdentificationNumberException;
-import assignment.exceptions.InvalidNameFormatException;
+import assignment.exceptions.FieldRequiredException;
+import assignment.exceptions.InvalidFormatException;
 
 import javax.persistence.*;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+
+import static assignment.exceptions.InvalidFormatException.assertValidityOfInput;
 
 @Entity
 @Table(name = "buyers")
@@ -40,7 +41,7 @@ public class Buyer {
     public Buyer() {
     }
 
-    public Buyer(String fullName, String identificationNumber, String emailAddress) throws InvalidNameFormatException, InvalidEmailFormatException, InvalidIdentificationNumberException {
+    public Buyer(String fullName, String identificationNumber, String emailAddress) throws InvalidFormatException, FieldRequiredException {
         this.makeBuyerIndividual(); //todo revise the creation of corporate/individual buyer
         this.changeName(fullName.trim());
         this.changeBuyerIdentificationNumber(identificationNumber.trim());
@@ -49,7 +50,7 @@ public class Buyer {
         this.updateTransactions();
     }
 
-    public Buyer(String fullName, String identificationNumber, String emailAddress, String address) throws InvalidNameFormatException, InvalidEmailFormatException, InvalidIdentificationNumberException {
+    public Buyer(String fullName, String identificationNumber, String emailAddress, String address) throws InvalidFormatException, FieldRequiredException {
         this(fullName, identificationNumber, emailAddress);
         this.changeBuyerAddress(address);
     }
@@ -106,49 +107,53 @@ public class Buyer {
         this.type = "Corporate";
     }
 
-    public void changeName(String fullName) throws InvalidNameFormatException {
+    public void changeName(String fullName) throws InvalidFormatException, FieldRequiredException {
+        fullName = fullName.trim();
         String namePattern = "^[A-Z]{1}[a-z]+\\s[A-Z]{1}[a-z]+$";
-        if (fullName.matches(namePattern))
-            this.name = fullName;
-        else
-            throw new InvalidNameFormatException(fullName);
+        // Name should be shorter than 30 characters and respect the pattern 'Firstname Lastname'
+        assertValidityOfInput(fullName, "Name", 30, namePattern, "Firstname Lastname");
+        this.name = fullName;
     }
 
-    public void changeBuyerAddress(String address) {
+    public void changeBuyerAddress(String address) throws InvalidFormatException, FieldRequiredException {
+        address = address.trim();
+        String addressPattern = "^[a-zA-Z0-9\\.\\-\\s]+$";
+        // Address should respect a format (in this example, letters, digits, dots and dashes are allowed)
+        // Address should be shorter than 60 digits (
+        assertValidityOfInput(address, "Address", 60, addressPattern, "letters, digits, dots and dashes are allowed");
         this.address = address;
     }
 
-    public void changeBuyerEmailAddress(String emailAddress) throws InvalidEmailFormatException {
+    public void changeBuyerEmailAddress(String emailAddress) throws InvalidFormatException, FieldRequiredException {
         emailAddress = emailAddress.trim();
-        String emailPattern = "^[a-zA-Z\\.\\_]+@[a-zA-Z\\.]+$";
-        if (emailAddress.matches(emailPattern))
-            this.emailAddress = emailAddress;
-        else throw new InvalidEmailFormatException(emailAddress);
+        // Email pattern is only for example purposes
+        String emailPattern = "^[a-zA-Z0-9\\.\\_]+@[a-zA-Z0-9\\.]+$";
+        // Email address should have a valid format, and be shorter than 50 characters
+        assertValidityOfInput(emailAddress, "Email Address", 50, emailPattern, "exa.mple_123@email.dot.com");
+        this.emailAddress = emailAddress;
     }
 
-    public void changeBuyerIdentificationNumber(String idNr) throws InvalidIdentificationNumberException {
+    // Identification number is assigned to the buyer, according the it's type
+    // 'Individual' buyer should have a 13 digits UNIQUE string
+    // 'Corporate' buyer should have 9 digits UNIQUE string
+    public void changeBuyerIdentificationNumber(String idNr) throws InvalidFormatException, FieldRequiredException {
         switch (this.type) {
             case "Individual":
-                if (idNr.matches("^\\d{13}$"))
-                    this.identificationNumber = idNr;
-                else throw new InvalidIdentificationNumberException(idNr);
+                assertValidityOfInput(idNr, "Individual Identification number", 14, "^\\d{13}$", "13 digits only unique string");
                 break;
             case "Corporate":
-                if (idNr.matches("^\\d{9}$"))
-                    this.identificationNumber = idNr;
-                else throw new InvalidIdentificationNumberException(idNr, "corporate buyer");
+                assertValidityOfInput(idNr, "Corporate Identification number", 14, "^\\d{9}$", "9 digits only unique string");
                 break;
         }
+        this.identificationNumber = idNr;
     }
 
-    public void assignTodaysDate() {
+    private void assignTodaysDate() {
         this.registeredDate = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date());
     }
 
-    public void addTransactionValue(double orderCost) {
-        this.transactionsTotalSum += orderCost;
-    }
-
+    // Transaction is tied to the buyer, and viceversa
+    // Total sum and count of transaction values are updated
     public void addTransaction(Transaction transaction) {
         this.transactionList.add(transaction);
         this.addTransactionValue(transaction.getTransactionValue());
@@ -156,7 +161,30 @@ public class Buyer {
         this.updateTransactions();
     }
 
-    public void updateTransactions() {
+    public void removeTransaction(Transaction transaction) {
+        this.transactionList.remove(transaction);
+        this.removeTransactionValue(transaction.getTransactionValue());
+        this.updateTransactions();
+    }
+
+    // Once a new transaction is added for a buyer, the total displayed value of the buyer's transaction will be updated
+    private void addTransactionValue(double orderCost) {
+        this.transactionsTotalSum += orderCost;
+    }
+
+    // Once a new transaction is added for a buyer, the total displayed value of the buyer's transaction will be updated
+    private void removeTransactionValue(double orderCost) {
+        this.transactionsTotalSum -= orderCost;
+    }
+
+    // In case one transactions changes it value, the total transactions sum displayed on the buyer must be updated
+    public void updateTransactionValue(double previousValue, String newValue) {
+        this.transactionsTotalSum -= previousValue;
+        this.transactionsTotalSum += Double.parseDouble(newValue);
+    }
+
+    // Buyer's transaction count is updated to reflect the list of transactions
+    private void updateTransactions() {
         this.transactionsCount = this.transactionList.size();
     }
 

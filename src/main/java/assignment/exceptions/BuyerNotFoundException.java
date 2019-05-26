@@ -10,4 +10,7 @@ public class BuyerNotFoundException extends Exception {
     public BuyerNotFoundException(String fullName) {
         super(String.format("Buyer '%s' is not found in the database.", fullName));
     }
+    public BuyerNotFoundException() {
+        super("No buyers found.");
+    }
 }

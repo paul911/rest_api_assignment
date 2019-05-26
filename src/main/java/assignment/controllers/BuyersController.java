@@ -2,11 +2,14 @@ package assignment.controllers;
 
 
 import assignment.entities.Buyer;
+import assignment.entities.Transaction;
 import assignment.exceptions.*;
 import assignment.repositories.BuyersRepository;
+import assignment.repositories.TransactionsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import javax.persistence.NoResultException;
 import java.util.List;
 import java.util.Map;
 
@@ -17,57 +20,101 @@ public class BuyersController {
 
     @Autowired
     private BuyersRepository buyersRepository;
+    @Autowired
+    private TransactionsRepository transactionsRepository;
 
     @RequestMapping("/")
     public String home() {
-        return "Hello World!"; //todo
+        return buyersPath + "/{id} -> get -> search buyer with {id};\n" +
+                buyersPath + "/buyer/{name} -> get -> display buyer with {name};\n" +
+                buyersPath + "/buyer/{name}/transactions -> get -> display transactions for buyer with {name};\n" +
+                buyersPath + "/search -> post -> returns buyer containing keyword;\n" +
+                buyersPath + " -> post -> add a new buyer, required values: name, identification, email;\n" + //todo add address maybe
+                buyersPath + " -> put -> change buyer details, available values: name, identification, email, address;\n" + //todo add more
+                buyersPath + "/{id} -> delete -> delete buyer with {id}, and all its associated transactions.";
     }
 
-    @GetMapping(BuyersController.buyersPath)
+    @GetMapping(buyersPath)
     public List<Buyer> index() {
         return buyersRepository.findAll();
     }
 
-    @GetMapping(BuyersController.buyersPath + "/{id}")
-    public Buyer show(@PathVariable String id) {
-        return buyersRepository.findById(Integer.parseInt(id)).orElse(null);
+    @GetMapping(buyersPath + "/{id}")
+    public Buyer show(@PathVariable String id) throws BuyerNotFoundException {
+        int buyerID = Integer.parseInt(id);
+        return buyersRepository.findById(buyerID).orElseThrow(() -> new BuyerNotFoundException(buyerID));
     }
 
-    @GetMapping(BuyersController.buyersPath + "/search/{name}")
-    public List<Buyer> showBuyer(@PathVariable String name) {
-        return buyersRepository.findByNameContaining(name);
+    @GetMapping(buyersPath + "/buyer/{name}")
+    public Buyer showBuyer(@PathVariable String name) throws BuyerNotFoundException {
+        Buyer foundBuyer = buyersRepository.findByName(name);
+        if (foundBuyer != null)
+            return foundBuyer;
+        else throw new BuyerNotFoundException(name);
     }
 
-    @PostMapping(BuyersController.buyersPath + "/search")
-    public List<Buyer> search(@RequestBody Map<String, String> body) {
-        String searchTerm = body.get("text");
-        return buyersRepository.findByNameContaining(searchTerm);
+    @GetMapping(buyersPath + "/buyer/{name}/transactions")
+    public List<Transaction> showBuyersTransactions(@PathVariable String name) throws TransactionNotFoundException {
+        List<Transaction> transactionsForBuyer;
+        if (!(transactionsForBuyer = transactionsRepository.findByBuyerName(name)).isEmpty())
+            return transactionsForBuyer;
+        else throw new TransactionNotFoundException(name);
     }
 
-    @PostMapping(BuyersController.buyersPath)
-    public Buyer create(@RequestBody Map<String, String> body) throws BuyerAlreadyExistsException, InvalidNameFormatException, InvalidEmailFormatException, InvalidIdentificationNumberException {
-        String fullName = body.get("full name").trim();
+    @PostMapping(buyersPath + "/search")
+    public List<Buyer> search(@RequestParam String key) {
+        List<Buyer> searchResults = buyersRepository.findByNameContainingOrEmailAddressContainingOrIdentificationNumberContainingOrRegisteredDateContaining
+                (key, key, key, key);
+        if (!searchResults.isEmpty())
+            return searchResults;
+        else throw new NoResultException(String.format("No results returned for keyword '%s'", key));
+    }
+
+    @PostMapping(buyersPath)
+    public Buyer create(@RequestBody Map<String, String> body) throws BuyerAlreadyExistsException, InvalidFormatException, FieldRequiredException {
+        String fullName = body.get("name").trim();
         if (buyersRepository.findByName(fullName) != null)
             throw new BuyerAlreadyExistsException(fullName);
-        String identificationNumber = body.get("id number");
-        if (buyersRepository.findByIdentificationNumberContaining(identificationNumber) != null) {
+        String identificationNumber = body.get("identification");
+        if (buyersRepository.findByIdentificationNumber(identificationNumber) != null) {
             throw new BuyerAlreadyExistsException();
         }
         String email = body.get("email");
+        String address; //todo revise how to create individual / corporate, with/without address
+
         return buyersRepository.save(new Buyer(fullName, identificationNumber, email));
     }
 
-    @PutMapping(BuyersController.buyersPath + "/{id}")
-    public Buyer update(@PathVariable String id, @RequestBody Map<String, String> body) throws BuyerNotFoundException, InvalidNameFormatException, InvalidIdentificationNumberException {
+    @PutMapping(buyersPath + "/{id}")
+    public Buyer update(@PathVariable String id, @RequestBody Map<String, String> body) throws BuyerNotFoundException, InvalidFormatException, FieldRequiredException {
         Buyer buyer = buyersRepository.findById(Integer.parseInt(id)).orElseThrow(() -> new BuyerNotFoundException(id));
-        buyer.changeName(body.get("first name") + " " + body.get("last name"));
-        buyer.changeBuyerIdentificationNumber(body.get("id number"));
+        if (body.containsKey("name")) {
+            buyer.changeName(body.get("name"));
+            // If the buyer has transactions, all the transactions must have the name of the buyer updated
+            for (Transaction transaction : buyer.getTransactionList()) {
+                transaction.changeBuyerName(body.get("name"));
+                transactionsRepository.save(transaction);
+            }
+        }
+        if (body.containsKey("identification"))
+            buyer.changeBuyerIdentificationNumber(body.get("identification"));
+        if (body.containsKey("email"))
+            buyer.changeBuyerEmailAddress(body.get("email"));
+        if (body.containsKey("address"))
+            buyer.changeBuyerAddress(body.get("address"));
         return buyersRepository.save(buyer);
     }
 
-    @DeleteMapping(BuyersController.buyersPath + "/{id}")
-    public boolean delete(@PathVariable String id) {
-        buyersRepository.deleteById(Integer.parseInt(id));
-        return true;
+    @DeleteMapping(buyersPath + "/{id}")
+    public String delete(@PathVariable String id) throws BuyerNotFoundException {
+        Integer buyerID = Integer.parseInt(id);
+        Buyer buyerToDelete = buyersRepository.findById(buyerID).orElseThrow(() -> new BuyerNotFoundException(buyerID));
+        List<Transaction> buyerTransactions = buyerToDelete.getTransactionList();
+        for (Transaction transactionToDelete : buyerTransactions) {
+            transactionsRepository.deleteById(transactionToDelete.getOrderNumber());
+        }
+        String deletedBuyer = buyerToDelete.toString();
+        buyersRepository.deleteById(buyerID);
+        return deletedBuyer + " has been successfully deleted.";
     }
 }

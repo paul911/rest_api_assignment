@@ -1,8 +1,13 @@
 package assignment.entities;
 
+import assignment.exceptions.FieldRequiredException;
+import assignment.exceptions.InvalidFormatException;
+
 import javax.persistence.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+
+import static assignment.exceptions.InvalidFormatException.assertValidityOfInput;
 
 @SequenceGenerator(name = "ordernr", initialValue = 10000000, allocationSize = 1)
 @Entity
@@ -25,10 +30,9 @@ public class Transaction {
     private Buyer buyer;
 
     public Transaction() {
-
     }
 
-    public Transaction(Buyer buyer, String transactionValue, String description) {
+    public Transaction(Buyer buyer, String transactionValue, String description) throws InvalidFormatException, FieldRequiredException {
         this.assignToBuyer(buyer);
         this.assignTodaysDate();
         this.setTransactionValue(transactionValue);
@@ -60,25 +64,32 @@ public class Transaction {
 
     // Change Transactions info
 
-    public void assignToBuyer(Buyer buyer) {
-        this.buyer = buyer;
-        this.buyerName = buyer.getName();
+    public void changeBuyerName(String name) {
+        this.buyerName = name;
     }
 
-    public void assignTodaysDate() {
+    void assignToBuyer(Buyer buyer) {
+        this.buyer = buyer;
+        this.changeBuyerName(buyer.getName());
+    }
+
+    private void assignTodaysDate() {
         this.purchaseDate = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date());
     }
 
-    public void setTransactionValue(String transactionValue) {
+    public void setTransactionValue(String transactionValue) throws InvalidFormatException, FieldRequiredException {
+        String pattern = "^\\d+(\\.{1}\\d{1,2})?$";
+        assertValidityOfInput(transactionValue, "Transaction Value", 12, pattern, "Max 10 digits, with maximum 2 decimals ( use . as divider)");
         this.transactionValue = Double.parseDouble(transactionValue);
     }
 
-    public void editTransactionDescription(String newDescription) {
+    public void editTransactionDescription(String newDescription) throws InvalidFormatException, FieldRequiredException {
+        assertValidityOfInput(newDescription, "Transaction Description", 100, ".+", "Description can only contain a maximum of 100 characters");
         this.description = newDescription;
     }
 
     @Override
-    public String toString() { //todo add the buyer name
+    public String toString() {
         return "Transaction{" +
                 "Order Number='" + +this.orderNumber +
                 "', Purchase Date ='" + this.purchaseDate +

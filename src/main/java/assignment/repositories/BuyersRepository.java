@@ -11,5 +11,7 @@ public interface BuyersRepository extends JpaRepository<Buyer, Integer> {
 
     List<Buyer> findByNameContaining(String name);
     Buyer findByName(String name);
-    Buyer findByIdentificationNumberContaining(String identificationNumber);
+    Buyer findByIdentificationNumber(String identificationNumber);
+    List<Buyer> findByNameContainingOrEmailAddressContainingOrIdentificationNumberContainingOrRegisteredDateContaining
+    (String name, String email, String identificationNumber, String registeredDate);
 }
