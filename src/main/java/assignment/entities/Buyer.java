@@ -14,6 +14,11 @@ import static assignment.exceptions.InvalidFormatException.assertValidityOfInput
 @Entity
 @Table(name = "buyers")
 public class Buyer {
+
+    public static final String INDIVIDUAL = "individual";
+    public static final String CORPORATE = "corporate";
+
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
@@ -25,8 +30,10 @@ public class Buyer {
     private String identificationNumber;
     @Column(name = "Email_Address")
     private String emailAddress;
+    @Column(name = "Phone_Number")
+    private String phone;
     @Column(name = "Address")
-    private String address; //todo
+    private String address;
     @Column(name = "Registered_Date")
     private String registeredDate;
     @Column(name = "Transactions_Executed")
@@ -37,22 +44,18 @@ public class Buyer {
     @Column(name = "Transactions")
     private List<Transaction> transactionList = new ArrayList<>();
 
+
     // Constructors
     public Buyer() {
     }
 
-    public Buyer(String fullName, String identificationNumber, String emailAddress) throws InvalidFormatException, FieldRequiredException {
-        this.makeBuyerIndividual(); //todo revise the creation of corporate/individual buyer
+    public Buyer(String buyerType, String fullName, String identificationNumber, String emailAddress) throws InvalidFormatException, FieldRequiredException {
+        this.setBuyerType(buyerType);
         this.changeName(fullName.trim());
         this.changeBuyerIdentificationNumber(identificationNumber.trim());
         this.changeBuyerEmailAddress(emailAddress.trim());
         this.assignTodaysDate();
         this.updateTransactions();
-    }
-
-    public Buyer(String fullName, String identificationNumber, String emailAddress, String address) throws InvalidFormatException, FieldRequiredException {
-        this(fullName, identificationNumber, emailAddress);
-        this.changeBuyerAddress(address);
     }
 
     // Get Buyer Info
@@ -71,6 +74,10 @@ public class Buyer {
 
     public String getIdentificationNumber() {
         return this.identificationNumber;
+    }
+
+    public String getPhone() {
+        return this.phone;
     }
 
     public String getEmailAddress() {
@@ -99,12 +106,18 @@ public class Buyer {
 
     // Change Buyer info
 
-    public void makeBuyerIndividual() {
-        this.type = "Individual";
-    }
-
-    public void makeBuyerCorporate() {
-        this.type = "Corporate";
+    private void setBuyerType(String buyerType) throws InvalidFormatException, FieldRequiredException {
+        buyerType = buyerType.trim().toLowerCase();
+        assertValidityOfInput(buyerType, "Buyer Type", 11, "(^individual$)|(^corporate$)",
+                "Value must be either 'Individual' or 'Corporate', not case sensitive.");
+        switch (buyerType) {
+            case INDIVIDUAL:
+                this.type = "Individual";
+                break;
+            case CORPORATE:
+                this.type = "Corporate";
+                break;
+        }
     }
 
     public void changeName(String fullName) throws InvalidFormatException, FieldRequiredException {
@@ -127,22 +140,30 @@ public class Buyer {
     public void changeBuyerEmailAddress(String emailAddress) throws InvalidFormatException, FieldRequiredException {
         emailAddress = emailAddress.trim();
         // Email pattern is only for example purposes
-        String emailPattern = "^[a-zA-Z0-9\\.\\_]+@[a-zA-Z0-9\\.]+$";
+        String emailPattern = "^[a-zA-Z0-9\\.\\_]+@[a-zA-Z0-9\\.]+\\.[a-zA-Z0-9\\.]+$";
         // Email address should have a valid format, and be shorter than 50 characters
         assertValidityOfInput(emailAddress, "Email Address", 50, emailPattern, "exa.mple_123@email.dot.com");
         this.emailAddress = emailAddress;
+    }
+
+    public void setPhone(String phone) throws InvalidFormatException, FieldRequiredException {
+        phone = phone.trim();
+        String pattern = "(^\\d{10}$)|(^\\d{13}$)|(^\\+\\d{11}$)";
+        // Phone number can follow 3 different patterns: 07XXXXXXXX, 004X7XXXXXXXX or +4X7XXXXXXXX
+        assertValidityOfInput(phone, "Phone Number", 14, pattern, "07XXXXXXXX, 004X7XXXXXXXX or +4X7XXXXXXXX, without any spaces.");
+        this.phone = phone;
     }
 
     // Identification number is assigned to the buyer, according the it's type
     // 'Individual' buyer should have a 13 digits UNIQUE string
     // 'Corporate' buyer should have 9 digits UNIQUE string
     public void changeBuyerIdentificationNumber(String idNr) throws InvalidFormatException, FieldRequiredException {
-        switch (this.type) {
-            case "Individual":
+        switch (this.type.toLowerCase()) {
+            case INDIVIDUAL:
                 assertValidityOfInput(idNr, "Individual Identification number", 14, "^\\d{13}$", "13 digits only unique string");
                 break;
-            case "Corporate":
-                assertValidityOfInput(idNr, "Corporate Identification number", 14, "^\\d{9}$", "9 digits only unique string");
+            case CORPORATE:
+                assertValidityOfInput(idNr, "Corporate Identification number", 10, "^\\d{9}$", "9 digits only unique string");
                 break;
         }
         this.identificationNumber = idNr;
@@ -194,8 +215,9 @@ public class Buyer {
                 "id='" + id +
                 "', Name='" + this.name +
                 "', Personal Identification Number='" + this.identificationNumber +
-                "', Address='" + this.address +
                 "', Email Address='" + this.emailAddress +
+                "', Phone Number='" + this.phone +
+                "', Address='" + this.address +
                 "', Registered Date='" + this.registeredDate +
                 "', Total Transactions='" + this.transactionList.size() +
                 "', Total Transactions Sum='" + this.transactionsTotalSum +

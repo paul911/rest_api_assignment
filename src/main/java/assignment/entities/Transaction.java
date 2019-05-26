@@ -32,7 +32,10 @@ public class Transaction {
     public Transaction() {
     }
 
-    public Transaction(Buyer buyer, String transactionValue, String description) throws InvalidFormatException, FieldRequiredException {
+    public Transaction(Buyer buyer, String transactionValue, String description) throws Exception {
+        if (buyer.getAddress() == null || buyer.getPhone() == null)
+            throw new Exception(String.format("Buyer '%s' does not contain an address or phone number." +
+                    " Add a valid address and phone number in order to place transaction.", buyer.getName()));
         this.assignToBuyer(buyer);
         this.assignTodaysDate();
         this.setTransactionValue(transactionValue);

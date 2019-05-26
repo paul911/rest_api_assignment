@@ -30,13 +30,13 @@ public class TransactionsController {
         return transactionsRepository.findAll();
     }
 
-    @GetMapping(TransactionsController.transactionsPath + "/{id}")
+    @GetMapping(transactionsPath + "/{id}")
     public Transaction show(@PathVariable String id) throws TransactionNotFoundException {
         Integer orderNumber = Integer.parseInt(id);
         return transactionsRepository.findById(orderNumber).orElseThrow(() -> new TransactionNotFoundException(orderNumber));
     }
 
-    @GetMapping(TransactionsController.transactionsPath + "/date/{purchaseDate}")
+    @GetMapping(transactionsPath + "/date/{purchaseDate}")
     public List<Transaction> findByDate(@PathVariable String date) throws TransactionNotFoundException {
         List<Transaction> transactionsByDate;
         if (!(transactionsByDate = transactionsRepository.findBypurchaseDateContaining(date)).isEmpty())
@@ -44,18 +44,16 @@ public class TransactionsController {
         else throw new TransactionNotFoundException();
     }
 
-    @PostMapping(TransactionsController.transactionsPath + "/search/id")
-    public List<Transaction> search(@RequestParam Integer orderNumber) {
-        return transactionsRepository.findByOrderNumberContaining(orderNumber); //todo message or exception
+    @PostMapping(transactionsPath + "/search/id")
+    public List<Transaction> search(@RequestParam Integer orderNumber) throws TransactionNotFoundException {
+        List<Transaction> transactions = transactionsRepository.findByOrderNumberContaining(orderNumber);
+        if (transactions.isEmpty())
+            throw new TransactionNotFoundException(orderNumber);
+        else return transactions;
     }
 
-    @PostMapping(TransactionsController.transactionsPath + "/search")
-    public List<Transaction> searchForBuyer(@RequestParam String buyer) {
-        return transactionsRepository.findByBuyerName(buyer); //todo message or exception
-    }
-
-    @PostMapping(TransactionsController.transactionsPath)
-    public Transaction create(@RequestBody Map<String, String> body) throws BuyerNotFoundException, InvalidFormatException, FieldRequiredException {
+    @PostMapping(transactionsPath)
+    public Transaction create(@RequestBody Map<String, String> body) throws Exception {
         String buyerName = body.get("name");
         String transactionValue = body.get("value");
         String transactionDescription = body.get("description");
@@ -70,7 +68,7 @@ public class TransactionsController {
         }
     }
 
-    @PutMapping(TransactionsController.transactionsPath + "/{id}")
+    @PutMapping(transactionsPath + "/{id}")
     public Transaction update(@PathVariable String id, @RequestBody Map<String, String> body) throws TransactionNotFoundException, InvalidFormatException, FieldRequiredException {
         Integer transactionID = Integer.parseInt(id);
         Transaction transaction = transactionsRepository.findById(transactionID).orElseThrow(() -> new TransactionNotFoundException(transactionID));
@@ -88,16 +86,16 @@ public class TransactionsController {
         return transactionsRepository.save(transaction);
     }
 
-    @DeleteMapping(TransactionsController.transactionsPath + "/{id}")
-    public boolean delete(@PathVariable String id) throws TransactionNotFoundException {
+    @DeleteMapping(transactionsPath + "/{id}")
+    public String delete(@PathVariable String id) throws TransactionNotFoundException {
         Integer transactionID = Integer.parseInt(id);
         Transaction transactionToDelete = transactionsRepository.findById(transactionID)
                 .orElseThrow(() -> new TransactionNotFoundException(transactionID));
         Buyer transactionOwner = buyersRepository.findByName(transactionToDelete.getBuyerName());
         transactionOwner.removeTransaction(transactionToDelete);
         buyersRepository.save(transactionOwner);
+        String deletedTransaction = transactionToDelete.toString();
         transactionsRepository.deleteById(transactionID);
-        return true;
-        //todo return deleted transaction tostring
+        return deletedTransaction + " has been successfully deleted.";
     }
 }

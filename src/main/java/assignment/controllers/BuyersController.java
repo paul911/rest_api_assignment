@@ -25,13 +25,21 @@ public class BuyersController {
 
     @RequestMapping("/")
     public String home() {
-        return buyersPath + "/{id} -> get -> search buyer with {id};\n" +
-                buyersPath + "/buyer/{name} -> get -> display buyer with {name};\n" +
-                buyersPath + "/buyer/{name}/transactions -> get -> display transactions for buyer with {name};\n" +
-                buyersPath + "/search -> post -> returns buyer containing keyword;\n" +
-                buyersPath + " -> post -> add a new buyer, required values: name, identification, email;\n" + //todo add address maybe
-                buyersPath + " -> put -> change buyer details, available values: name, identification, email, address;\n" + //todo add more
-                buyersPath + "/{id} -> delete -> delete buyer with {id}, and all its associated transactions.";
+        return "<pre>\n" + buyersPath + " -> get -> see all buyers;\n" +
+                buyersPath + "/{id} -> get -> show buyer with the exact {id};\n" +
+                buyersPath + "/buyer/{name} -> get -> display buyer with the exact {name};\n" +
+                buyersPath + "/buyer/{name}/transactions -> get -> display the list of transactions for buyer with {name};\n" +
+                buyersPath + "/search -> post -> returns list of buyers containing keyword;\n" +
+                buyersPath + " -> post -> add a new buyer; required values: name, identification, email;\n" +
+                buyersPath + " -> put -> change buyer details, available values: name, identification, email, address, phone;\n" +
+                buyersPath + "/{id} -> delete -> delete buyer with {id}, and all its associated transactions;\n" +
+                "/transactions -> get -> see all transactions made;\n" +
+                "/transactions/{id} -> get -> see transaction with {id}\n" +
+                "/transactions/date/{purchaseDate} -> get -> see list of transactions containing the {purchaseDate};\n" +
+                "/transactions/search/id -> post -> get list of transactions with id containing provided keyword;\n" +
+                "/transactions -> post -> create new transaction; required values: name (of buyer having this transaction, value, description;\n" +
+                "/transactions/{id} -> put -> update transaction with provided {id}; can change: value, description;\n" +
+                "/transactions/{id} -> delete -> delete transaction with provided {id}; updates buyer.</pre>";
     }
 
     @GetMapping(buyersPath)
@@ -72,6 +80,12 @@ public class BuyersController {
 
     @PostMapping(buyersPath)
     public Buyer create(@RequestBody Map<String, String> body) throws BuyerAlreadyExistsException, InvalidFormatException, FieldRequiredException {
+        if (!body.containsKey("name"))
+            throw new FieldRequiredException("name");
+        if (!body.containsKey("identification"))
+            throw new FieldRequiredException("identification");
+        if (!body.containsKey("email"))
+            throw new FieldRequiredException("email");
         String fullName = body.get("name").trim();
         if (buyersRepository.findByName(fullName) != null)
             throw new BuyerAlreadyExistsException(fullName);
@@ -80,9 +94,8 @@ public class BuyersController {
             throw new BuyerAlreadyExistsException();
         }
         String email = body.get("email");
-        String address; //todo revise how to create individual / corporate, with/without address
-
-        return buyersRepository.save(new Buyer(fullName, identificationNumber, email));
+        String type = body.getOrDefault("type", Buyer.INDIVIDUAL);
+        return buyersRepository.save(new Buyer(type, fullName, identificationNumber, email));
     }
 
     @PutMapping(buyersPath + "/{id}")
@@ -100,6 +113,8 @@ public class BuyersController {
             buyer.changeBuyerIdentificationNumber(body.get("identification"));
         if (body.containsKey("email"))
             buyer.changeBuyerEmailAddress(body.get("email"));
+        if (body.containsKey("phone"))
+            buyer.setPhone(body.get("phone"));
         if (body.containsKey("address"))
             buyer.changeBuyerAddress(body.get("address"));
         return buyersRepository.save(buyer);
