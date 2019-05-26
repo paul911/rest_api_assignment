@@ -1,6 +1,6 @@
-package assignment.Repositories;
+package assignment.repositories;
 
-import assignment.Entities.Transaction;
+import assignment.entities.Transaction;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

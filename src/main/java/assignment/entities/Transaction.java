@@ -1,4 +1,4 @@
-package assignment.Entities;
+package assignment.entities;
 
 import javax.persistence.*;
 import java.text.SimpleDateFormat;
@@ -20,13 +20,16 @@ public class Transaction {
     private String purchaseDate;
     @Column(name = "Description")
     private String description;
-
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "buyer_id")
+    private Buyer buyer;
 
     public Transaction() {
+
     }
 
-    public Transaction(String buyerName, String transactionValue, String description) {
-        this.assignToBuyer(buyerName);
+    public Transaction(Buyer buyer, String transactionValue, String description) {
+        this.assignToBuyer(buyer);
         this.assignTodaysDate();
         this.setTransactionValue(transactionValue);
         this.editTransactionDescription(description);
@@ -57,12 +60,13 @@ public class Transaction {
 
     // Change Transactions info
 
-    public void assignToBuyer(String buyerName) { //todo first check if buyer exists
-        this.buyerName = buyerName;
+    public void assignToBuyer(Buyer buyer) {
+        this.buyer = buyer;
+        this.buyerName = buyer.getName();
     }
 
     public void assignTodaysDate() {
-        this.purchaseDate = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss").format(new Date());
+        this.purchaseDate = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date());
     }
 
     public void setTransactionValue(String transactionValue) {
@@ -83,6 +87,4 @@ public class Transaction {
                 "', Description='" + this.description +
                 "'}";
     }
-
-
 }
