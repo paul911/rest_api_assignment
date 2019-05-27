@@ -50,10 +50,12 @@ REST API + MySQL Interview Assignment
     - `value` : value of transaction: max 8 digits long number, with a max of 2 decimals
     - `description` : transaction description
     
+  - Transaction info can be changed by a put request; fields that can be changed: `value, description`
   - changing the name of a Buyer, will also change the name associated to all its transactions (if present)
   - deleting a Buyer will delete all of its associated tranasactions
-  - deleting a single transaction, will update the `transactions count` and `total sum of transaction` on the Buyer
-  - if changing the name of identification of a Buyer, it will first check if the new values aren't already assigned
+  - deleting a single transaction, will update the `transactions count` and `total sum of transactions` on the Buyer
+  - changing the value of a single transaction, will update the `total sum of transactions` on the Buyer
+  - if changing the name or identification of a Buyer, it will first check if the new values aren't already assigned
       
       
 ## Known bugs
