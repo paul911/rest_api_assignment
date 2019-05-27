@@ -25,18 +25,19 @@ public class BuyersController {
 
     @RequestMapping("/")
     public String home() {
-        return "<pre>\n" + buyersPath + " -> get -> see all buyers;\n" +
+        return "<pre>\n" +
+                buyersPath + " -> get -> see all buyers;\n" +
                 buyersPath + "/{id} -> get -> show buyer with the exact {id};\n" +
                 buyersPath + "/buyer/{name} -> get -> display buyer with the exact {name};\n" +
                 buyersPath + "/buyer/{name}/transactions -> get -> display the list of transactions for buyer with {name};\n" +
-                buyersPath + "/search -> post -> returns list of buyers containing keyword;\n" +
+                buyersPath + "/search -> post -> returns list of buyers containing keyword;\n\n" +
                 buyersPath + " -> post -> add a new buyer; required values: name, identification, email;\n" +
                 buyersPath + " -> put -> change buyer details, available values: name, identification, email, address, phone;\n" +
-                buyersPath + "/{id} -> delete -> delete buyer with {id}, and all its associated transactions;\n" +
+                buyersPath + "/{id} -> delete -> delete buyer with {id}, and all its associated transactions;\n\n" +
                 "/transactions -> get -> see all transactions made;\n" +
                 "/transactions/{id} -> get -> see transaction with {id}\n" +
                 "/transactions/date/{purchaseDate} -> get -> see list of transactions containing the {purchaseDate};\n" +
-                "/transactions/search/id -> post -> get list of transactions with id containing provided keyword;\n" +
+                "/transactions/search/id -> post -> get list of transactions with id containing provided keyword;\n\n" +
                 "/transactions -> post -> create new transaction; required values: name (of buyer having this transaction, value, description;\n" +
                 "/transactions/{id} -> put -> update transaction with provided {id}; can change: value, description;\n" +
                 "/transactions/{id} -> delete -> delete transaction with provided {id}; updates buyer.</pre>";
@@ -99,18 +100,25 @@ public class BuyersController {
     }
 
     @PutMapping(buyersPath + "/{id}")
-    public Buyer update(@PathVariable String id, @RequestBody Map<String, String> body) throws BuyerNotFoundException, InvalidFormatException, FieldRequiredException {
+    public Buyer update(@PathVariable String id, @RequestBody Map<String, String> body) throws BuyerNotFoundException, InvalidFormatException, FieldRequiredException, BuyerAlreadyExistsException {
         Buyer buyer = buyersRepository.findById(Integer.parseInt(id)).orElseThrow(() -> new BuyerNotFoundException(id));
         if (body.containsKey("name")) {
-            buyer.changeName(body.get("name"));
+            String name = body.get("name");
+            if (buyersRepository.findByName(name) != null)
+                throw new BuyerAlreadyExistsException(name);
+            buyer.changeName(name);
             // If the buyer has transactions, all the transactions must have the name of the buyer updated
             for (Transaction transaction : buyer.getTransactionList()) {
                 transaction.changeBuyerName(body.get("name"));
                 transactionsRepository.save(transaction);
             }
         }
-        if (body.containsKey("identification"))
-            buyer.changeBuyerIdentificationNumber(body.get("identification"));
+        if (body.containsKey("identification")) {
+            String identificationNumber = body.get("identification");
+            if (buyersRepository.findByIdentificationNumber(identificationNumber) != null)
+                throw new BuyerAlreadyExistsException();
+            buyer.changeBuyerIdentificationNumber(identificationNumber);
+        }
         if (body.containsKey("email"))
             buyer.changeBuyerEmailAddress(body.get("email"));
         if (body.containsKey("phone"))
