@@ -57,6 +57,11 @@ REST API + MySQL Interview Assignment
   - changing the value of a single transaction, will update the `total sum of transactions` on the Buyer
   - if changing the name or identification of a Buyer, it will first check if the new values aren't already assigned
       
-      
+ 
+## To Do
+
+ - add a html/css/js FE interface
+ 
+ 
 ## Known bugs
   
