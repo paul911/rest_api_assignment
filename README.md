@@ -42,7 +42,7 @@ REST API + MySQL Interview Assignment
     
   - Buyer info can be changed by a put request: available options include: `name, identification, email, phone, address`;
   
-  - new Transactions can be created bu a post request; body sent must contain the following mandatory fields:
+  - new Transactions can be created by a post request; body sent must contain the following mandatory fields:
     - `name` : name of Buyer to which the transaction while be associated; 
     - following restrictions apply, transactions cannot be created if:
       - the Buyer with the name provided in the transaction post request, must exist in the database;
