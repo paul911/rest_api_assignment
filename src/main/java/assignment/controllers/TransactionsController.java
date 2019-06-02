@@ -16,27 +16,26 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
+@RequestMapping("/transactions")
 public class TransactionsController {
-
-    private static final String transactionsPath = "/transactions";
 
     @Autowired
     private TransactionsRepository transactionsRepository;
     @Autowired
     private BuyersRepository buyersRepository;
 
-    @GetMapping(TransactionsController.transactionsPath)
+    @GetMapping()
     public List<Transaction> index() {
         return transactionsRepository.findAll();
     }
 
-    @GetMapping(transactionsPath + "/{id}")
+    @GetMapping("/{id}")
     public Transaction show(@PathVariable String id) throws TransactionNotFoundException {
         Integer orderNumber = Integer.parseInt(id);
         return transactionsRepository.findById(orderNumber).orElseThrow(() -> new TransactionNotFoundException(orderNumber));
     }
 
-    @GetMapping(transactionsPath + "/date/{purchaseDate}")
+    @GetMapping("/date/{purchaseDate}")
     public List<Transaction> findByDate(@PathVariable String date) throws TransactionNotFoundException {
         List<Transaction> transactionsByDate;
         if (!(transactionsByDate = transactionsRepository.findBypurchaseDateContaining(date)).isEmpty())
@@ -44,7 +43,7 @@ public class TransactionsController {
         else throw new TransactionNotFoundException();
     }
 
-    @PostMapping(transactionsPath + "/search/id")
+    @PostMapping("/search/id")
     public List<Transaction> search(@RequestParam Integer orderNumber) throws TransactionNotFoundException {
         List<Transaction> transactions = transactionsRepository.findByOrderNumberContaining(orderNumber);
         if (transactions.isEmpty())
@@ -52,7 +51,7 @@ public class TransactionsController {
         else return transactions;
     }
 
-    @PostMapping(transactionsPath)
+    @PostMapping()
     public Transaction create(@RequestBody Map<String, String> body) throws Exception {
         String buyerName = body.get("name");
         String transactionValue = body.get("value");
@@ -68,7 +67,7 @@ public class TransactionsController {
         }
     }
 
-    @PutMapping(transactionsPath + "/{id}")
+    @PutMapping("/{id}")
     public Transaction update(@PathVariable String id, @RequestBody Map<String, String> body) throws TransactionNotFoundException, InvalidFormatException, FieldRequiredException {
         Integer transactionID = Integer.parseInt(id);
         Transaction transaction = transactionsRepository.findById(transactionID).orElseThrow(() -> new TransactionNotFoundException(transactionID));
@@ -86,7 +85,7 @@ public class TransactionsController {
         return transactionsRepository.save(transaction);
     }
 
-    @DeleteMapping(transactionsPath + "/{id}")
+    @DeleteMapping("/{id}")
     public String delete(@PathVariable String id) throws TransactionNotFoundException {
         Integer transactionID = Integer.parseInt(id);
         Transaction transactionToDelete = transactionsRepository.findById(transactionID)
