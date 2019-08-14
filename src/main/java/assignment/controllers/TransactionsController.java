@@ -1,100 +1,59 @@
 package assignment.controllers;
 
-
-import assignment.entities.Buyer;
+import assignment.DTOs.TransactionDTO;
 import assignment.entities.Transaction;
-import assignment.exceptions.BuyerNotFoundException;
-import assignment.exceptions.FieldRequiredException;
-import assignment.exceptions.InvalidFormatException;
-import assignment.exceptions.TransactionNotFoundException;
-import assignment.repositories.BuyersRepository;
-import assignment.repositories.TransactionsRepository;
+import assignment.services.BuyerServices;
+import assignment.services.TransactionServices;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/transactions")
 public class TransactionsController {
 
     @Autowired
-    private TransactionsRepository transactionsRepository;
+    private TransactionServices transactions;
     @Autowired
-    private BuyersRepository buyersRepository;
+    private BuyerServices buyers;
 
-    @GetMapping()
+    @GetMapping
     public List<Transaction> index() {
-        return transactionsRepository.findAll();
+        return transactions.getAllTransactions();
     }
 
-    @GetMapping("/{id}")
-    public Transaction show(@PathVariable String id) throws TransactionNotFoundException {
-        Integer orderNumber = Integer.parseInt(id);
-        return transactionsRepository.findById(orderNumber).orElseThrow(() -> new TransactionNotFoundException(orderNumber));
+    @GetMapping(params = "id")
+    public TransactionDTO show(@RequestParam int id) {
+        Transaction foundTransaction = transactions.getTransactionById(id);
+        return transactions.getTransactionInfo(foundTransaction);
     }
 
-    @GetMapping("/date/{purchaseDate}")
-    public List<Transaction> findByDate(@PathVariable String date) throws TransactionNotFoundException {
-        List<Transaction> transactionsByDate;
-        if (!(transactionsByDate = transactionsRepository.findBypurchaseDateContaining(date)).isEmpty())
-            return transactionsByDate;
-        else throw new TransactionNotFoundException();
+    @GetMapping(params = "date")
+    public List<TransactionDTO> findByDate(@RequestParam String date) {
+        List<Transaction> foundTransactions = transactions.getTransactionsByPurchaseDate(date);
+        return transactions.getTransactionsInfo(foundTransactions);
     }
 
-    @PostMapping("/search/id")
-    public List<Transaction> search(@RequestParam Integer orderNumber) throws TransactionNotFoundException {
-        List<Transaction> transactions = transactionsRepository.findByOrderNumberContaining(orderNumber);
-        if (transactions.isEmpty())
-            throw new TransactionNotFoundException(orderNumber);
-        else return transactions;
-    }
-
-    @PostMapping()
-    public Transaction create(@RequestBody Map<String, String> body) throws Exception {
-        String buyerName = body.get("name");
-        String transactionValue = body.get("value");
-        String transactionDescription = body.get("description");
-        Buyer transactionOwner;
-        if ((transactionOwner = buyersRepository.findByName(buyerName)) == null)
-            throw new BuyerNotFoundException(buyerName);
-        else {
-            Transaction newTransaction = new Transaction(transactionOwner, transactionValue, transactionDescription);
-            transactionOwner.addTransaction(newTransaction);
-            buyersRepository.save(transactionOwner);
-            return transactionsRepository.save(newTransaction);
-        }
+    @PostMapping
+    public TransactionDTO create(@RequestBody @Valid TransactionDTO trans) {
+        Transaction createdTransaction = transactions.createNewTransaction(trans);
+        return transactions.getTransactionInfo(createdTransaction);
     }
 
     @PutMapping("/{id}")
-    public Transaction update(@PathVariable String id, @RequestBody Map<String, String> body) throws TransactionNotFoundException, InvalidFormatException, FieldRequiredException {
-        Integer transactionID = Integer.parseInt(id);
-        Transaction transaction = transactionsRepository.findById(transactionID).orElseThrow(() -> new TransactionNotFoundException(transactionID));
+    public TransactionDTO update(@PathVariable int id, @RequestBody @Valid TransactionDTO newTransactionInfo) {
+        Transaction newTransaction = transactions.updateTransactionWithId(id, newTransactionInfo);
 
-        String newValue;
-        if ((newValue = body.get("value")) != null) {
-            newValue = newValue.trim();
-            Buyer transctionOwner = buyersRepository.findByName(transaction.getBuyerName());
-            transaction.setTransactionValue(newValue);
-            transctionOwner.updateTransactionValue(transaction.getTransactionValue(), newValue);
-        }
-        String description;
-        if ((description = body.get("description")) != null)
-            transaction.editTransactionDescription(description);
-        return transactionsRepository.save(transaction);
+        return transactions.getTransactionInfo(newTransaction);
     }
 
     @DeleteMapping("/{id}")
-    public String delete(@PathVariable String id) throws TransactionNotFoundException {
-        Integer transactionID = Integer.parseInt(id);
-        Transaction transactionToDelete = transactionsRepository.findById(transactionID)
-                .orElseThrow(() -> new TransactionNotFoundException(transactionID));
-        Buyer transactionOwner = buyersRepository.findByName(transactionToDelete.getBuyerName());
-        transactionOwner.removeTransaction(transactionToDelete);
-        buyersRepository.save(transactionOwner);
-        String deletedTransaction = transactionToDelete.toString();
-        transactionsRepository.deleteById(transactionID);
-        return deletedTransaction + " has been successfully deleted.";
+    public String delete(@PathVariable int id) {
+//        Integer transactionID = Integer.parseInt(id);
+        transactions.deleteTransaction(id);
+
+        return String.format("Transaction %s has been successfully deleted.", id);
     }
 }

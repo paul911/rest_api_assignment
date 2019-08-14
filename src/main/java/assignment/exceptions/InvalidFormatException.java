@@ -1,17 +1,16 @@
 package assignment.exceptions;
 
-public class InvalidFormatException extends Exception {
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
 
-    private String input;
-    private String pattern;
-    private String example;
-    private String maxLength;
+@ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
+public class InvalidFormatException extends RuntimeException {
 
-    public InvalidFormatException(String field, String formatExample) {
+    private InvalidFormatException(String field, String formatExample) {
         super(String.format("Invalid format for the '%s' field. Please provide valid input (Example: %s)", field, formatExample));
     }
 
-    public static void assertValidityOfInput(String input, String field, int maxLength, String pattern, String example) throws FieldRequiredException, InvalidFormatException {
+    public static void assertValidityOfInput(String input, String field, int maxLength, String pattern, String example) {
         if (input.length() == 0)
             throw new FieldRequiredException(field);
         if (!(input.matches(pattern)) || (input.length() >= maxLength)) {

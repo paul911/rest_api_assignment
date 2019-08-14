@@ -1,7 +1,10 @@
 package assignment.exceptions;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
 
-public class TransactionNotFoundException extends Exception {
+@ResponseStatus(HttpStatus.NOT_FOUND)
+public class TransactionNotFoundException extends RuntimeException {
     private Integer transactionId;
 
     public TransactionNotFoundException(Integer transactionId) {

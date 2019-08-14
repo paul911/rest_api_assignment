@@ -1,7 +1,10 @@
 package assignment.exceptions;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
 
-public class BuyerNotFoundException extends Exception {
+@ResponseStatus(HttpStatus.NOT_FOUND)
+public class BuyerNotFoundException extends RuntimeException {
     private int buyerId;
 
     public BuyerNotFoundException(int buyerId) {

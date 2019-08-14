@@ -1,26 +1,25 @@
 package assignment.controllers;
 
-
+import assignment.DTOs.BuyerDTO;
+import assignment.DTOs.TransactionDTO;
 import assignment.entities.Buyer;
 import assignment.entities.Transaction;
-import assignment.exceptions.*;
-import assignment.repositories.BuyersRepository;
-import assignment.repositories.TransactionsRepository;
+import assignment.services.BuyerServices;
+import assignment.services.TransactionServices;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import javax.persistence.NoResultException;
+import javax.validation.Valid;
 import java.util.List;
-import java.util.Map;
 
 @RequestMapping("/buyers")
 @RestController
 public class BuyersController {
 
     @Autowired
-    private BuyersRepository buyersRepository;
+    private BuyerServices buyers;
     @Autowired
-    private TransactionsRepository transactionsRepository;
+    private TransactionServices transactions;
 
 //    @RequestMapping("/")
 //    public String home() {
@@ -42,101 +41,52 @@ public class BuyersController {
 //                "/transactions/{id} -> delete -> delete transaction with provided {id}; updates buyer.</pre>";
 //    }
 
-    @GetMapping()
-    public List<Buyer> index() {
-        return buyersRepository.findAll();
+    @GetMapping
+    public List<BuyerDTO> index() {
+        List<Buyer> allBuyers = buyers.getAllBuyers();
+        return buyers.getBuyersInfo(allBuyers);
     }
 
-    @GetMapping("/{key}")
-    public Buyer show(@PathVariable String key) throws BuyerNotFoundException {
-        int buyerID = Integer.parseInt(key);
-        return buyersRepository.findById(buyerID).orElseThrow(() -> new BuyerNotFoundException(buyerID));
+    @GetMapping("/{id}")
+    public BuyerDTO show(@PathVariable int id) {
+        Buyer foundBuyer = buyers.findBuyerById(id);
+        return buyers.getBuyerInfo(foundBuyer);
     }
 
-    @GetMapping("/{name}/transactions")
-    public List<Transaction> showBuyersTransactions(@PathVariable String name) throws TransactionNotFoundException {
-        List<Transaction> transactionsForBuyer;
-        if (!(transactionsForBuyer = transactionsRepository.findByBuyerName(name)).isEmpty())
-            return transactionsForBuyer;
-        else throw new TransactionNotFoundException(name);
-    }
-
-    @GetMapping("/buyer/{name}")
-    public Buyer showBuyer(@PathVariable String name) throws BuyerNotFoundException {
-        Buyer foundBuyer = buyersRepository.findByName(name);
-        if (foundBuyer != null)
-            return foundBuyer;
-        else throw new BuyerNotFoundException(name);
+    @GetMapping("/{id}/transactions")
+    public List<TransactionDTO> showBuyersTransactions(@PathVariable int id) {
+        List<Transaction> buyerTransactions = buyers.getTransactionsForBuyer(id);
+        return transactions.getTransactionsInfo(buyerTransactions);
     }
 
     @PostMapping("/search")
-    public List<Buyer> search(@RequestParam String key) {
-        List<Buyer> searchResults = buyersRepository.findByNameContainingOrEmailAddressContainingOrIdentificationNumberContainingOrRegisteredDateContaining
-                (key, key, key, key);
-        if (!searchResults.isEmpty())
-            return searchResults;
-        else throw new NoResultException(String.format("No results returned for keyword '%s'", key));
+    public List<BuyerDTO> search(@RequestParam String keyword) {
+        List<Buyer> foundBuyers = buyers.findBuyersContainingKeywords(keyword);
+        return buyers.getBuyersInfo(foundBuyers);
     }
 
-    @PostMapping()
-    public Buyer create(@RequestBody Map<String, String> body) throws BuyerAlreadyExistsException, InvalidFormatException, FieldRequiredException {
-        if (!body.containsKey("name"))
-            throw new FieldRequiredException("name");
-        if (!body.containsKey("identification"))
-            throw new FieldRequiredException("identification");
-        if (!body.containsKey("email"))
-            throw new FieldRequiredException("email");
-        String fullName = body.get("name").trim();
-        if (buyersRepository.findByName(fullName) != null)
-            throw new BuyerAlreadyExistsException(fullName);
-        String identificationNumber = body.get("identification");
-        if (buyersRepository.findByIdentificationNumber(identificationNumber) != null) {
-            throw new BuyerAlreadyExistsException();
-        }
-        String email = body.get("email");
-        String type = body.getOrDefault("type", Buyer.INDIVIDUAL);
-        return buyersRepository.save(new Buyer(type, fullName, identificationNumber, email));
+    @PostMapping
+    public BuyerDTO create(@RequestBody @Valid BuyerDTO buyer) {
+        Buyer createdBuyer = buyers.createNewBuyer(buyer);
+        return buyers.getBuyerInfo(createdBuyer);
     }
 
     @PutMapping("/{id}")
-    public Buyer update(@PathVariable String id, @RequestBody Map<String, String> body) throws BuyerNotFoundException, InvalidFormatException, FieldRequiredException, BuyerAlreadyExistsException {
-        Buyer buyer = buyersRepository.findById(Integer.parseInt(id)).orElseThrow(() -> new BuyerNotFoundException(id));
-        if (body.containsKey("name")) {
-            String name = body.get("name");
-            if (buyersRepository.findByName(name) != null)
-                throw new BuyerAlreadyExistsException(name);
-            buyer.changeName(name);
-            // If the buyer has transactions, all the transactions must have the name of the buyer updated
-            for (Transaction transaction : buyer.getTransactionList()) {
-                transaction.changeBuyerName(body.get("name"));
-                transactionsRepository.save(transaction);
-            }
-        }
-        if (body.containsKey("identification")) {
-            String identificationNumber = body.get("identification");
-            if (buyersRepository.findByIdentificationNumber(identificationNumber) != null)
-                throw new BuyerAlreadyExistsException();
-            buyer.changeBuyerIdentificationNumber(identificationNumber);
-        }
-        if (body.containsKey("email"))
-            buyer.changeBuyerEmailAddress(body.get("email"));
-        if (body.containsKey("phone"))
-            buyer.setPhone(body.get("phone"));
-        if (body.containsKey("address"))
-            buyer.changeBuyerAddress(body.get("address"));
-        return buyersRepository.save(buyer);
+    public BuyerDTO update(@PathVariable int id, @RequestBody @Valid BuyerDTO newBuyerInfo) {
+
+        Buyer newBuyer = buyers.updateBuyerWithId(id, newBuyerInfo);
+
+        return buyers.getBuyerInfo(newBuyer);
     }
 
     @DeleteMapping("/{id}")
-    public String delete(@PathVariable String id) throws BuyerNotFoundException {
-        Integer buyerID = Integer.parseInt(id);
-        Buyer buyerToDelete = buyersRepository.findById(buyerID).orElseThrow(() -> new BuyerNotFoundException(buyerID));
-        List<Transaction> buyerTransactions = buyerToDelete.getTransactionList();
-        for (Transaction transactionToDelete : buyerTransactions) {
-            transactionsRepository.deleteById(transactionToDelete.getOrderNumber());
-        }
-        String deletedBuyer = buyerToDelete.toString();
-        buyersRepository.deleteById(buyerID);
-        return deletedBuyer + " has been successfully deleted.";
+    public String delete(@PathVariable int id) {
+        buyers.deleteAllTransactionsForBuyerWithId(id);
+
+        String buyerName = buyers.findBuyerById(id).getName();
+
+        buyers.deleteBuyerWithId(id);
+
+        return String.format("Buyer %s has been successfully deleted.", buyerName);
     }
 }

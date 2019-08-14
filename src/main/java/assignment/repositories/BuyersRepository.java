@@ -9,7 +9,6 @@ import java.util.List;
 @Repository
 public interface BuyersRepository extends JpaRepository<Buyer, Integer> {
 
-    Buyer findByName(String name);
     Buyer findByIdentificationNumber(String identificationNumber);
     List<Buyer> findByNameContainingOrEmailAddressContainingOrIdentificationNumberContainingOrRegisteredDateContaining
     (String name, String email, String identificationNumber, String registeredDate);

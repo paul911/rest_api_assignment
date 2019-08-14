@@ -8,8 +8,6 @@ import java.util.List;
 
 @Repository
 public interface TransactionsRepository extends JpaRepository<Transaction, Integer> {
-    Transaction findByOrderNumber(Integer orderNr);
-    List<Transaction> findByOrderNumberContaining(Integer orderNr);
-    List<Transaction> findBypurchaseDateContaining(String date);
-    List<Transaction> findByBuyerName(String buyerName);
+    List<Transaction> findByPurchaseDateContaining(String date);
+    List<Transaction> findByBuyerId(int yerId);
 }

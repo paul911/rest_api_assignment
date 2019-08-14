@@ -1,8 +1,5 @@
 package assignment.entities;
 
-import assignment.exceptions.FieldRequiredException;
-import assignment.exceptions.InvalidFormatException;
-
 import javax.persistence.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -26,20 +23,19 @@ public class Transaction {
     @Column(name = "Description")
     private String description;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "buyer_id")
+    @JoinColumn(name = "buyer")
     private Buyer buyer;
+    private int buyerId;
 
     public Transaction() {
     }
 
-    public Transaction(Buyer buyer, String transactionValue, String description) throws Exception {
-        if (buyer.getAddress() == null || buyer.getPhone() == null)
-            throw new Exception(String.format("Buyer '%s' does not contain an address or phone number." +
-                    " Add a valid address and phone number in order to place transaction.", buyer.getName()));
+    public Transaction(Buyer buyer, double transactionValue, String description) {
+
         this.assignToBuyer(buyer);
         this.assignTodaysDate();
         this.setTransactionValue(transactionValue);
-        this.editTransactionDescription(description);
+        this.setTransactionDescription(description);
     }
 
     // Get Transactions info
@@ -50,6 +46,14 @@ public class Transaction {
 
     public String getBuyerName() {
         return this.buyerName;
+    }
+
+    public int getBuyerId() {
+        return this.buyerId;
+    }
+
+    private void setBuyerId(int id) {
+        this.buyerId = id;
     }
 
     public double getTransactionValue() {
@@ -67,26 +71,28 @@ public class Transaction {
 
     // Change Transactions info
 
-    public void changeBuyerName(String name) {
+    private void setBuyerName(String name) {
         this.buyerName = name;
     }
 
-    void assignToBuyer(Buyer buyer) {
+    public void assignToBuyer(Buyer buyer) {
         this.buyer = buyer;
-        this.changeBuyerName(buyer.getName());
+        this.setBuyerName(buyer.getName());
+        this.setBuyerId(buyer.getId());
     }
 
     private void assignTodaysDate() {
         this.purchaseDate = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date());
     }
 
-    public void setTransactionValue(String transactionValue) throws InvalidFormatException, FieldRequiredException {
+    public void setTransactionValue(double transactionValue) {
+        String value = String.valueOf(transactionValue);
         String pattern = "^\\d+(\\.{1}\\d{1,2})?$";
-        assertValidityOfInput(transactionValue, "Transaction Value", 12, pattern, "Max 10 digits, with maximum 2 decimals ( use . as divider)");
-        this.transactionValue = Double.parseDouble(transactionValue);
+        assertValidityOfInput(value, "Transaction Value", 12, pattern, "Max 10 digits, with maximum 2 decimals ( use . as divider)");
+        this.transactionValue = Double.parseDouble(value);
     }
 
-    public void editTransactionDescription(String newDescription) throws InvalidFormatException, FieldRequiredException {
+    public void setTransactionDescription(String newDescription) {
         assertValidityOfInput(newDescription, "Transaction Description", 100, ".+", "Description can only contain a maximum of 100 characters");
         this.description = newDescription;
     }

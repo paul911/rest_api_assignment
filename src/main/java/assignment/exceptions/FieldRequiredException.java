@@ -1,10 +1,14 @@
 package assignment.exceptions;
 
-public class FieldRequiredException extends Exception {
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+@ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
+public class FieldRequiredException extends RuntimeException {
 
     String field;
 
-    public FieldRequiredException(String field) {
+     FieldRequiredException(String field) {
         super(String.format("'%s' field cannot be blank!", field));
     }
 
